@@ -10,10 +10,6 @@ data class ErrorResponse(
 
 object ErrorCodes {
 
-    val INVALID_PLAYER_STATUS = ErrorResponse("Invalid status value", Response.Status.BAD_REQUEST.statusCode, "INVALID_STATUS")
-
-    fun createErrorResponse(message: String, status: Response.Status, code: String? = null): ErrorResponse {
-        return ErrorResponse(message, status.statusCode, code)
-    }
+    val INVALID_PLAYER_STATUS = ErrorResponse("Invalid status value", Response.Status.BAD_REQUEST.statusCode, "INVALID_PLAYER_STATUS")
 }
 

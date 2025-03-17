@@ -1,6 +1,7 @@
 package io.playersapi.adapters.web
 
 import io.playersapi.application.dto.PlayerDTO
+import io.playersapi.application.dto.PlayerFilterDTO
 import io.playersapi.application.services.PlayerService
 import io.playersapi.core.domain.PlayerStatus
 import io.quarkus.test.InjectMock
@@ -29,8 +30,9 @@ class PlayerControllerTest {
 
     @Test
     fun `should return players filtered by status ACTIVE`() {
-        `when` ( playerService.filterPlayers(null, null, null, PlayerStatus.ACTIVE, null))
-            .thenReturn(players.filter { it.status == PlayerStatus.ACTIVE })
+        `when` ( playerService.filterPlayers(
+            PlayerFilterDTO(null, null, null, PlayerStatus.ACTIVE.name, null)
+        )).thenReturn(players.filter { it.status == PlayerStatus.ACTIVE })
 
         given()
             .queryParam("status", "ACTIVE")
@@ -46,8 +48,9 @@ class PlayerControllerTest {
 
     @Test
     fun `should return players filtered by status RETIRED`() {
-        `when` ( playerService.filterPlayers(null, null, null, PlayerStatus.RETIRED, null))
-            .thenReturn(players.filter { it.status == PlayerStatus.RETIRED })
+        `when` ( playerService.filterPlayers(
+            PlayerFilterDTO(null, null, null, PlayerStatus.RETIRED.name, null)
+            )).thenReturn(players.filter { it.status == PlayerStatus.RETIRED })
 
         given()
             .queryParam("status", "RETIRED")
@@ -62,8 +65,9 @@ class PlayerControllerTest {
 
     @Test
     fun `should return players filtered by position Defender`() {
-        `when` ( playerService.filterPlayers("Defender", null, null, null, null))
-            .thenReturn(players.filter { it.position == "Defender" })
+        `when` ( playerService.filterPlayers(
+         PlayerFilterDTO("Defender", null, null, null, null)
+        )).thenReturn(players.filter { it.position == "Defender" })
 
         given()
             .queryParam("position", "Defender")
@@ -77,8 +81,9 @@ class PlayerControllerTest {
 
     @Test
     fun `should return players filtered by min birth year 1998`() {
-        `when` ( playerService.filterPlayers(null, 1998, null, null, null))
-            .thenReturn(players.filter { it.birthYear >= 1998 })
+        `when` ( playerService.filterPlayers(
+            PlayerFilterDTO(null, 1998, null, null, null)
+        )).thenReturn(players.filter { it.birthYear >= 1998 })
 
         given()
             .queryParam("minBirthYear", 1998)
@@ -94,8 +99,9 @@ class PlayerControllerTest {
 
     @Test
     fun `should return players filtered by max birth year 1978`() {
-        `when` ( playerService.filterPlayers(null, null, 1978, null, null))
-            .thenReturn(players.filter { it.birthYear <= 1978 })
+        `when` ( playerService.filterPlayers(
+            PlayerFilterDTO(null, null, 1978, null, null)
+        )).thenReturn(players.filter { it.birthYear <= 1978 })
 
         given()
             .queryParam("maxBirthYear", 1978)
@@ -110,8 +116,9 @@ class PlayerControllerTest {
 
     @Test
     fun `should return players filtered by club Milan`() {
-        `when` ( playerService.filterPlayers(null, null, null, null, "Milan"))
-            .thenReturn(players.filter { it.club == "Milan" })
+        `when` ( playerService.filterPlayers(
+            PlayerFilterDTO(null, null, null, null, "Milan")
+        )).thenReturn(players.filter { it.club == "Milan" })
 
         given()
             .queryParam("club", "Milan")
@@ -125,8 +132,9 @@ class PlayerControllerTest {
 
     @Test
     fun `should return players matching multiple filters`() {
-        `when` ( playerService.filterPlayers("Midfielder", 1995, 2000, PlayerStatus.ACTIVE, "Udinese"))
-            .thenReturn(
+        `when` ( playerService.filterPlayers(
+            PlayerFilterDTO("Midfielder", 1995, 2000, PlayerStatus.ACTIVE.name, "Udinese")
+        )).thenReturn(
                 players.filter {
                     it.position == "Midfielder" && it.birthYear in 1995..2000 && it.status == PlayerStatus.ACTIVE && it.club == "Udinese"
                 })
@@ -147,8 +155,9 @@ class PlayerControllerTest {
 
     @Test
     fun `should return empty list when no players match filters`() {
-        `when` ( playerService.filterPlayers("Striker", 2000, null, PlayerStatus.ACTIVE, "Juventus"))
-            .thenReturn(emptyList())
+        `when` ( playerService.filterPlayers(
+            PlayerFilterDTO("Striker", 2000, null, PlayerStatus.ACTIVE.name, "Juventus")
+            )).thenReturn(emptyList())
 
         given()
             .queryParam("position", "Striker")
@@ -164,8 +173,9 @@ class PlayerControllerTest {
 
     @Test
     fun `should return all players when no filters are provided`() {
-        `when` ( playerService.filterPlayers(null, null, null, null, null))
-            .thenReturn(players)
+        `when` ( playerService.filterPlayers(
+            PlayerFilterDTO(null, null, null, null, null)
+            )).thenReturn(players)
 
         given()
             .`when`()
@@ -176,6 +186,38 @@ class PlayerControllerTest {
     }
 
     @Test
+    fun `should return all players when the only filter is unknown`() {
+        `when` ( playerService.filterPlayers(
+            PlayerFilterDTO(null, null, null, null, null)
+        )).thenReturn(players)
+
+        given()
+            .queryParam("unknown", "filter")
+            .`when`()
+            .get()
+            .then()
+            .statusCode(Response.Status.OK.statusCode)
+            .body("size()", `is`(5))
+    }
+
+    @Test
+    fun `should return players filtered by club Milan ignoring unknown filter`() {
+        `when` ( playerService.filterPlayers(
+            PlayerFilterDTO(null, null, null, null, "Milan")
+        )).thenReturn(players.filter { it.club == "Milan" })
+
+        given()
+            .queryParam("club", "Milan")
+            .queryParam("unknown", "filter")
+            .`when`()
+            .get()
+            .then()
+            .statusCode(Response.Status.OK.statusCode)
+            .body("size()", `is`(1))
+            .body("[0].name", `is`("Rafael Leao"))
+    }
+
+    @Test
     fun `should return 400 for invalid status`() {
         given()
             .queryParam("status", "INVALID_STATUS")
@@ -183,6 +225,8 @@ class PlayerControllerTest {
             .get()
             .then()
             .statusCode(Response.Status.BAD_REQUEST.statusCode)
+            .body("message", `is` ("Invalid status value: INVALID_STATUS"))
+            .body("code" , `is` ("INVALID_PLAYER_STATUS"))
     }
 
 }

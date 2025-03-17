@@ -1,5 +1,6 @@
 package io.playersapi.adapters.persistence
 
+import io.playersapi.application.dto.PlayerFilterDTO
 import io.playersapi.core.domain.PlayerStatus
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -20,7 +21,9 @@ class InMemoryPlayerRepositoryTest {
 
     @Test
     fun `should return filtered players by position`() {
-        val players = repository.findByFilters(position = "Winger", null, null, null, null)
+        val players = repository.findByFilters(
+            PlayerFilterDTO(position = "Winger", null, null, null, null)
+        )
 
         assertEquals(1, players.size)
         assertEquals("Rafael Leao", players.first().name)
@@ -28,7 +31,9 @@ class InMemoryPlayerRepositoryTest {
 
     @Test
     fun `should return filtered players by minBirthYear`() {
-        val players = repository.findByFilters(null, 1990, null, null, null)
+        val players = repository.findByFilters(
+            PlayerFilterDTO(null, 1990, null, null, null)
+        )
 
         assertEquals(3, players.size)
         assertTrue(players.all { it.birthYear >= 1990 })
@@ -36,7 +41,9 @@ class InMemoryPlayerRepositoryTest {
 
     @Test
     fun `should return filtered players by maxBirthYear`() {
-        val players = repository.findByFilters(null, null, 1980, null, null)
+        val players = repository.findByFilters(
+            PlayerFilterDTO(null, null, 1980, null, null)
+        )
 
         assertEquals(2, players.size)
         assertTrue(players.all { it.birthYear <= 1980 })
@@ -44,7 +51,9 @@ class InMemoryPlayerRepositoryTest {
 
     @Test
     fun `should return filtered players by status`() {
-        val players = repository.findByFilters(null, null, null, PlayerStatus.ACTIVE, null)
+        val players = repository.findByFilters(
+            PlayerFilterDTO(null, null, null, PlayerStatus.ACTIVE.name, null)
+        )
 
         assertEquals(3, players.size)
         assertTrue(players.all { it.status == PlayerStatus.ACTIVE })
@@ -52,7 +61,9 @@ class InMemoryPlayerRepositoryTest {
 
     @Test
     fun `should return filtered players by club`() {
-        val players = repository.findByFilters(null, null, null, null, "Milan")
+        val players = repository.findByFilters(
+            PlayerFilterDTO(null, null, null, null, "Milan")
+        )
 
         assertEquals(1, players.size)
         assertEquals("Rafael Leao", players.first().name)
@@ -60,7 +71,9 @@ class InMemoryPlayerRepositoryTest {
 
     @Test
     fun `should return filtered players by multiple criteria`() {
-        val players = repository.findByFilters("Winger", 1998, null, PlayerStatus.ACTIVE, "Milan")
+        val players = repository.findByFilters(
+            PlayerFilterDTO("Winger", 1998, null, PlayerStatus.ACTIVE.name, "Milan")
+        )
 
         assertEquals(1, players.size)
         assertEquals("Rafael Leao", players.first().name)
@@ -68,7 +81,9 @@ class InMemoryPlayerRepositoryTest {
 
     @Test
     fun `should return empty list if no players match the filters`() {
-        val players = repository.findByFilters("Goalkeeper", 1980, 1990, PlayerStatus.RETIRED, "Juventus")
+        val players = repository.findByFilters(
+            PlayerFilterDTO("Goalkeeper", 1980, 1990, PlayerStatus.RETIRED.name, "Juventus")
+        )
 
         assertTrue(players.isEmpty())
     }
