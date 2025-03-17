@@ -1,6 +1,6 @@
 package io.playersapi.core.domain
 
-data class Player(
+data class PlayerResource(
     val id: Long,
     val name: String,
     val position: String,
