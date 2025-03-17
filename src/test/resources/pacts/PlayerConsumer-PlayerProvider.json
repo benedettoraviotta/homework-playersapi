@@ -1,0 +1,711 @@
+{
+  "consumer": {
+    "name": "PlayerConsumer"
+  },
+  "interactions": [
+    {
+      "description": "Request players with wrong filter, ignore it and return all ",
+      "key": "63375b1a",
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "Return all players without filter"
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "path": "/players",
+        "query": {
+          "unknown": [
+            "filter"
+          ]
+        }
+      },
+      "response": {
+        "body": {
+          "content": [
+            {
+              "birthYear": 1999,
+              "club": "Milan",
+              "id": 1,
+              "name": "Rafael Leao",
+              "position": "Winger",
+              "status": "ACTIVE"
+            },
+            {
+              "birthYear": 1978,
+              "club": "Retired",
+              "id": 2,
+              "name": "Gianluigi Buffon",
+              "position": "Goalkeeper",
+              "status": "RETIRED"
+            },
+            {
+              "birthYear": 1999,
+              "club": "Inter",
+              "id": 3,
+              "name": "Alessandro Bastoni",
+              "position": "Defender",
+              "status": "ACTIVE"
+            },
+            {
+              "birthYear": 1998,
+              "club": "Udinese",
+              "id": 4,
+              "name": "Sandi Lovric",
+              "position": "Midfielder",
+              "status": "ACTIVE"
+            },
+            {
+              "birthYear": 1973,
+              "club": "Retired",
+              "id": 5,
+              "name": "Filippo Inzaghi",
+              "position": "Forward",
+              "status": "RETIRED"
+            }
+          ],
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "status": 200
+      },
+      "transport": "http",
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "Request players filtered by minBirthYear and maxBirthYear",
+      "key": "8238626e",
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "There are players with different birth years"
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "path": "/players",
+        "query": {
+          "maxBirthYear": [
+            "2005"
+          ],
+          "minBirthYear": [
+            "1999"
+          ]
+        }
+      },
+      "response": {
+        "body": {
+          "content": [
+            {
+              "birthYear": 1999,
+              "club": "Milan",
+              "id": 1,
+              "name": "Rafael Leao",
+              "position": "Winger",
+              "status": "ACTIVE"
+            },
+            {
+              "birthYear": 1999,
+              "club": "Inter",
+              "id": 3,
+              "name": "Alessandro Bastoni",
+              "position": "Defender",
+              "status": "ACTIVE"
+            }
+          ],
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "status": 200
+      },
+      "transport": "http",
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "Request players filtered by ACTIVE status and Defender position",
+      "key": "ea5ef368",
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "There are players with specific status and position"
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "path": "/players",
+        "query": {
+          "position": [
+            "Defender"
+          ],
+          "status": [
+            "ACTIVE"
+          ]
+        }
+      },
+      "response": {
+        "body": {
+          "content": [
+            {
+              "birthYear": 1999,
+              "club": "Inter",
+              "id": 3,
+              "name": "Alessandro Bastoni",
+              "position": "Defender",
+              "status": "ACTIVE"
+            }
+          ],
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "status": 200
+      },
+      "transport": "http",
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "Request players filtered by ACTIVE status, minBirthYear, and club",
+      "key": "673f9ab9",
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "There are players with specific status, birth year, and club"
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "path": "/players",
+        "query": {
+          "club": [
+            "Milan"
+          ],
+          "minBirthYear": [
+            "1995"
+          ],
+          "status": [
+            "ACTIVE"
+          ]
+        }
+      },
+      "response": {
+        "body": {
+          "content": [
+            {
+              "birthYear": 1999,
+              "club": "Milan",
+              "id": 1,
+              "name": "Rafael Leao",
+              "position": "Winger",
+              "status": "ACTIVE"
+            }
+          ],
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "status": 200
+      },
+      "transport": "http",
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "Request players filtered by status, position, minBirthYear, maxBirthYear, and club",
+      "key": "16a622b9",
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "There are players with various attributes"
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "path": "/players",
+        "query": {
+          "club": [
+            "Inter"
+          ],
+          "maxBirthYear": [
+            "2000"
+          ],
+          "minBirthYear": [
+            "1990"
+          ],
+          "position": [
+            "Defender"
+          ],
+          "status": [
+            "ACTIVE"
+          ]
+        }
+      },
+      "response": {
+        "body": {
+          "content": [
+            {
+              "birthYear": 1999,
+              "club": "Inter",
+              "id": 3,
+              "name": "Alessandro Bastoni",
+              "position": "Defender",
+              "status": "ACTIVE"
+            }
+          ],
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "status": 200
+      },
+      "transport": "http",
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "a request to get all players without filter",
+      "key": "6f50131b",
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "players exist"
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "path": "/players"
+      },
+      "response": {
+        "body": {
+          "content": [
+            {
+              "birthYear": 1999,
+              "club": "Milan",
+              "id": 1,
+              "name": "Rafael Leao",
+              "position": "Winger",
+              "status": "ACTIVE"
+            },
+            {
+              "birthYear": 1978,
+              "club": "Retired",
+              "id": 2,
+              "name": "Gianluigi Buffon",
+              "position": "Goalkeeper",
+              "status": "RETIRED"
+            },
+            {
+              "birthYear": 1999,
+              "club": "Inter",
+              "id": 3,
+              "name": "Alessandro Bastoni",
+              "position": "Defender",
+              "status": "ACTIVE"
+            },
+            {
+              "birthYear": 1998,
+              "club": "Udinese",
+              "id": 4,
+              "name": "Sandi Lovric",
+              "position": "Midfielder",
+              "status": "ACTIVE"
+            },
+            {
+              "birthYear": 1973,
+              "club": "Retired",
+              "id": 5,
+              "name": "Filippo Inzaghi",
+              "position": "Forward",
+              "status": "RETIRED"
+            }
+          ],
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "status": 200
+      },
+      "transport": "http",
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "a request to get players filtered by club Milan",
+      "key": "9af6b6e7",
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "players exist"
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "path": "/players",
+        "query": {
+          "club": [
+            "Milan"
+          ]
+        }
+      },
+      "response": {
+        "body": {
+          "content": [
+            {
+              "birthYear": 1999,
+              "club": "Milan",
+              "id": 1,
+              "name": "Rafael Leao",
+              "position": "Winger",
+              "status": "ACTIVE"
+            }
+          ],
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "status": 200
+      },
+      "transport": "http",
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "a request to get players filtered by position Defender",
+      "key": "e8318596",
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "players exist"
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "path": "/players",
+        "query": {
+          "position": [
+            "Defender"
+          ]
+        }
+      },
+      "response": {
+        "body": {
+          "content": [
+            {
+              "birthYear": 1999,
+              "club": "Inter",
+              "id": 3,
+              "name": "Alessandro Bastoni",
+              "position": "Defender",
+              "status": "ACTIVE"
+            }
+          ],
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "status": 200
+      },
+      "transport": "http",
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "a request to get players filtered by status ACTIVE",
+      "key": "1150b874",
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "players exist"
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "path": "/players",
+        "query": {
+          "status": [
+            "ACTIVE"
+          ]
+        }
+      },
+      "response": {
+        "body": {
+          "content": [
+            {
+              "birthYear": 1999,
+              "club": "Milan",
+              "id": 1,
+              "name": "Rafael Leao",
+              "position": "Winger",
+              "status": "ACTIVE"
+            },
+            {
+              "birthYear": 1999,
+              "club": "Inter",
+              "id": 3,
+              "name": "Alessandro Bastoni",
+              "position": "Defender",
+              "status": "ACTIVE"
+            },
+            {
+              "birthYear": 1998,
+              "club": "Udinese",
+              "id": 4,
+              "name": "Sandi Lovric",
+              "position": "Midfielder",
+              "status": "ACTIVE"
+            }
+          ],
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "status": 200
+      },
+      "transport": "http",
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "a request to get players filtered by status RETIRED",
+      "key": "9322075f",
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "players exist"
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "path": "/players",
+        "query": {
+          "status": [
+            "RETIRED"
+          ]
+        }
+      },
+      "response": {
+        "body": {
+          "content": [
+            {
+              "birthYear": 1978,
+              "club": "Retired",
+              "id": 2,
+              "name": "Gianluigi Buffon",
+              "position": "Goalkeeper",
+              "status": "RETIRED"
+            },
+            {
+              "birthYear": 1973,
+              "club": "Retired",
+              "id": 5,
+              "name": "Filippo Inzaghi",
+              "position": "Forward",
+              "status": "RETIRED"
+            }
+          ],
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "status": 200
+      },
+      "transport": "http",
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "a request to get players with max birth year 1978",
+      "key": "95dc2bfd",
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "players exist"
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "path": "/players",
+        "query": {
+          "maxBirthYear": [
+            "1978"
+          ]
+        }
+      },
+      "response": {
+        "body": {
+          "content": [
+            {
+              "birthYear": 1978,
+              "club": "Retired",
+              "id": 2,
+              "name": "Gianluigi Buffon",
+              "position": "Goalkeeper",
+              "status": "RETIRED"
+            },
+            {
+              "birthYear": 1973,
+              "club": "Retired",
+              "id": 5,
+              "name": "Filippo Inzaghi",
+              "position": "Forward",
+              "status": "RETIRED"
+            }
+          ],
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "status": 200
+      },
+      "transport": "http",
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "a request to get players with min birth year 1998",
+      "key": "7f0484e1",
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "players exist"
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "path": "/players",
+        "query": {
+          "minBirthYear": [
+            "1998"
+          ]
+        }
+      },
+      "response": {
+        "body": {
+          "content": [
+            {
+              "birthYear": 1999,
+              "club": "Milan",
+              "id": 1,
+              "name": "Rafael Leao",
+              "position": "Winger",
+              "status": "ACTIVE"
+            },
+            {
+              "birthYear": 1999,
+              "club": "Inter",
+              "id": 3,
+              "name": "Alessandro Bastoni",
+              "position": "Defender",
+              "status": "ACTIVE"
+            },
+            {
+              "birthYear": 1998,
+              "club": "Udinese",
+              "id": 4,
+              "name": "Sandi Lovric",
+              "position": "Midfielder",
+              "status": "ACTIVE"
+            }
+          ],
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "status": 200
+      },
+      "transport": "http",
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "a request with invalid status",
+      "key": "764310de",
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "players exist"
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "path": "/players",
+        "query": {
+          "status": [
+            "WRONG"
+          ]
+        }
+      },
+      "response": {
+        "body": {
+          "content": {
+            "code": "INVALID_PLAYER_STATUS",
+            "message": "Invalid status value: WRONG",
+            "status": 400
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "status": 400
+      },
+      "transport": "http",
+      "type": "Synchronous/HTTP"
+    }
+  ],
+  "metadata": {
+    "pact-jvm": {
+      "version": "4.6.17"
+    },
+    "pactSpecification": {
+      "version": "4.0"
+    }
+  },
+  "provider": {
+    "name": "PlayerProvider"
+  }
+}

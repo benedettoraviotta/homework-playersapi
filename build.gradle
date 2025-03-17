@@ -20,6 +20,9 @@ dependencies {
     testImplementation 'io.quarkus:quarkus-junit5'
     testImplementation 'io.quarkus:quarkus-junit5-mockito'
     testImplementation 'io.rest-assured:rest-assured'
+
+    //Contract test
+    testImplementation 'au.com.dius.pact.consumer:junit5:4.6.17'
 }
 
 group 'io.playersapi'
