@@ -1,15 +1,25 @@
 package io.playersapi.application.services
 
-import io.playersapi.application.dto.PlayerFilterDTO
-import io.playersapi.core.domain.PlayerResource
+import io.playersapi.adapters.web.errors.InvalidPlayerStatusException
+import io.playersapi.application.dto.PlayerFilter
 import io.playersapi.core.domain.PlayerStatus
 import io.playersapi.core.ports.PlayerRepository
+import io.playersapi.testutils.TestData
+import io.playersapi.testutils.TestData.players
 import io.quarkus.test.InjectMock
 import io.quarkus.test.junit.QuarkusTest
+import io.smallrye.mutiny.Uni
+import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.`when`
+import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
+import org.mockito.Mockito.*
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.stream.Stream
 
 @QuarkusTest
 class PlayerServiceTest {
@@ -24,139 +34,94 @@ class PlayerServiceTest {
         playerService = PlayerService(repository)
     }
 
-    private val players = listOf(
-        PlayerResource(1, "Rafael Leao", "Winger", 1999, PlayerStatus.ACTIVE, "Milan"),
-        PlayerResource(2, "Gianluigi Buffon", "Goalkeeper", 1978, PlayerStatus.RETIRED, "RETIRED"),
-        PlayerResource(3, "Alessandro Bastoni", "Defender", 1999, PlayerStatus.ACTIVE, "Inter"),
-        PlayerResource(4, "Sandi Lovric", "Midfielder", 1998, PlayerStatus.ACTIVE, "Udinese"),
-    )
-
-    @Test
-    fun `should return all players when no filters are applied`() {
-        `when` ( repository.findAll()).thenReturn(players)
-        `when` ( repository.findByFilters(
-            PlayerFilterDTO(null, null, null, null, null)
-        )).thenReturn(players)
-
-        val result = playerService.filterPlayers(
-            PlayerFilterDTO(null, null, null, null, null)
+    @ParameterizedTest
+    @MethodSource("filterArguments")
+    fun `should filter players based on filters`(
+        filter: PlayerFilter,
+        expectedPlayerNames: List<String>
+    ) = runBlocking {
+        `when`(repository.findByFilters(filter)).thenReturn(
+            Uni.createFrom().item(
+                TestData.players.filter { player ->
+                    val minBirthYear = filter.minBirthYear
+                    val maxBirthYear = filter.maxBirthYear
+                    (filter.position == null || player.position == filter.position) &&
+                            (filter.minBirthYear == null || player.birthYear >= minBirthYear!!) &&
+                            (filter.maxBirthYear == null || player.birthYear <= maxBirthYear!!) &&
+                            (filter.status == null || player.status.name == filter.status) &&
+                            (filter.club == null || player.club == filter.club)
+                }
+            )
         )
 
-        assertEquals(4, result.size)
+        val resultUni = playerService.filterPlayers(filter)
+        val result = resultUni.await().indefinitely()
+
+        assertEquals(expectedPlayerNames.size, result.size)
+        assertEquals(expectedPlayerNames, result.map { it.name })
+
+        verify(repository).findByFilters(filter)
+        verifyNoMoreInteractions(repository)
+    }
+
+    companion object {
+        @JvmStatic
+        fun filterArguments(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of(PlayerFilter(null, null, null, null, null), listOf("Rafael Leao", "Gianluigi Buffon", "Alessandro Bastoni", "Sandi Lovric", "Filippo Inzaghi")),
+                Arguments.of(PlayerFilter("Winger", null, null, null, null), listOf("Rafael Leao")),
+                Arguments.of(PlayerFilter(null, 1998, null, null, null), listOf("Rafael Leao", "Alessandro Bastoni", "Sandi Lovric")),
+                Arguments.of(PlayerFilter(null, null, 1980, null, null), listOf("Gianluigi Buffon", "Filippo Inzaghi")),
+                Arguments.of(PlayerFilter(null, null, null, PlayerStatus.ACTIVE.name, null), listOf("Rafael Leao", "Alessandro Bastoni", "Sandi Lovric")),
+                Arguments.of(PlayerFilter(null, null, null, PlayerStatus.RETIRED.name, null), listOf("Gianluigi Buffon", "Filippo Inzaghi")),
+                Arguments.of(PlayerFilter(null, null, null, null, "Inter"), listOf("Alessandro Bastoni")),
+                Arguments.of(PlayerFilter("Defender", 1995, 2000, PlayerStatus.ACTIVE.name, "Inter"), listOf("Alessandro Bastoni")),
+                Arguments.of(PlayerFilter("Forward", 2000, 2010, PlayerStatus.ACTIVE.name, "Juventus"), emptyList<String>())
+            )
+        }
     }
 
     @Test
-    fun `should filter players by position`() {
+    fun `filterPlayers should throw InvalidPlayerStatusException when status is invalid`() {
+        val filter = PlayerFilter(status = "invalid-status")
 
-        `when` ( repository.findByFilters(
-            PlayerFilterDTO("Winger", null, null, null, null)
-        )).thenReturn(players.filter { it.position == "Winger" })
+        val exception = assertThrows<InvalidPlayerStatusException> {
+            runBlocking { playerService.filterPlayers(filter).await().indefinitely() }
+        }
 
-        val result = playerService.filterPlayers(
-            PlayerFilterDTO("Winger", null, null, null, null)
-        )
+        assertEquals("Invalid player status: invalid-status", exception.message)
+        assertEquals("INVALID_PLAYER_STATUS", exception.code)
+    }
 
-        assertEquals(1, result.size)
-        assertEquals("Rafael Leao", result.first().name)
+    /*
+    @Test
+    fun `filterPlayers should retry when repository throws an exception`() {
+        val filter = PlayerFilter(position = "Winger")
+        val subscriptionCounter = AtomicInteger(0)
+
+        `when`(repository.findByFilters(filter))
+            .thenReturn(Uni.createFrom().failure(RuntimeException("Simulated error 1")))
+            .thenReturn(Uni.createFrom().failure(RuntimeException("Simulated error 2")))
+            .thenReturn(Uni.createFrom().item(players.filter { it.position == filter.position }))
+
+
+        val result = playerService.filterPlayers(filter).await().indefinitely()
+
+        assertEquals(3, subscriptionCounter.get())
+        assertEquals(result.size, 1)
+        verify(repository, times(3)).findByFilters(filter)
     }
 
     @Test
-    fun `should filter players by minBirthYear`() {
-        `when` (repository.findByFilters(
-            PlayerFilterDTO(null, 1998, null, null, null)
-        )).thenReturn(players.filter { it.birthYear >= 1998 })
+    fun `filterPlayers should throw exception when repository always throws an exception`() {
+        val filter = PlayerFilter(position = "Winger")
 
-        val result = playerService.filterPlayers(
-            PlayerFilterDTO(null, 1998, null, null, null)
+        `when`(repository.findByFilters(filter)).thenReturn(Uni.createFrom().failure(RuntimeException("Simulated persistent error")))
 
-        )
-
-        assertEquals(3, result.size)
-        assertEquals(listOf("Rafael Leao", "Alessandro Bastoni", "Sandi Lovric"), result.map { it.name })
-    }
-
-    @Test
-    fun `should filter players by maxBirthYear`() {
-        `when` ( repository.findByFilters(
-            PlayerFilterDTO(null, null, 1980, null, null)
-        )).thenReturn(players.filter { it.birthYear <= 1980 })
-
-        val result = playerService.filterPlayers(
-            PlayerFilterDTO(null, null, 1980, null, null)
-        )
-
-        assertEquals(1, result.size)
-        assertEquals("Gianluigi Buffon", result.first().name)
-    }
-
-    @Test
-    fun `should filter players by status ACTIVE`() {
-        `when` ( repository.findByFilters(
-            PlayerFilterDTO(null, null, null, PlayerStatus.ACTIVE.name, null)
-        )).thenReturn(players.filter { it.status == PlayerStatus.ACTIVE })
-
-        val result = playerService.filterPlayers(
-            PlayerFilterDTO(null, null, null, PlayerStatus.ACTIVE.name, null)
-        )
-
-        assertEquals(3, result.size)
-        assertEquals(listOf("Rafael Leao", "Alessandro Bastoni", "Sandi Lovric"), result.map { it.name })
-    }
-
-    @Test
-    fun `should filter players by status RETIRED`() {
-        `when` ( repository.findByFilters(
-            PlayerFilterDTO(null, null, null, PlayerStatus.RETIRED.name, null)
-        )).thenReturn(players.filter { it.status == PlayerStatus.RETIRED })
-
-        val result = playerService.filterPlayers(
-            PlayerFilterDTO(null, null, null, PlayerStatus.RETIRED.name, null)
-        )
-
-        assertEquals(1, result.size)
-        assertEquals("Gianluigi Buffon", result.first().name)
-    }
-
-    @Test
-    fun `should filter players by club`() {
-        `when` (repository.findByFilters(
-            PlayerFilterDTO(null, null, null, null, "Inter")
-        )).thenReturn(players.filter { it.club == "Inter" })
-
-        val result = playerService.filterPlayers(
-            PlayerFilterDTO(null, null, null, null, "Inter")
-        )
-
-        assertEquals(1, result.size)
-        assertEquals("Alessandro Bastoni", result.first().name)
-    }
-
-    @Test
-    fun `should apply multiple filters together`() {
-        `when` ( repository.findByFilters(
-            PlayerFilterDTO("Defender", 1995, 2000, PlayerStatus.ACTIVE.name, "Inter")
-            )).thenReturn(players.filter {
-                it.position == "Defender" && it.birthYear in 1995..2000 && it.status == PlayerStatus.ACTIVE && it.club == "Inter"
-            })
-
-        val result = playerService.filterPlayers(
-            PlayerFilterDTO("Defender", 1995, 2000, PlayerStatus.ACTIVE.name, "Inter")
-        )
-
-        assertEquals(1, result.size)
-        assertEquals("Alessandro Bastoni", result.first().name)
-    }
-
-    @Test
-    fun `should return empty list when no player matches filters`() {
-        `when` ( repository.findByFilters(
-            PlayerFilterDTO("Forward", 2000, 2010, PlayerStatus.ACTIVE.name, "Juventus")
-        )).thenReturn(emptyList())
-
-        val result = playerService.filterPlayers(
-            PlayerFilterDTO("Forward", 2000, 2010, PlayerStatus.ACTIVE.name, "Juventus")
-        )
-
-        assertEquals(0, result.size)
-    }
+        assertThrows<RuntimeException> {
+            runBlocking {
+                playerService.filterPlayers(filter).await().indefinitely()
+            }
+        }
+    }*/
 }

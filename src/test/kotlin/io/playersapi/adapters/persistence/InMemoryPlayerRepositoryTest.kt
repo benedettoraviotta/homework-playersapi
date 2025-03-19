@@ -1,7 +1,8 @@
 package io.playersapi.adapters.persistence
 
-import io.playersapi.application.dto.PlayerFilterDTO
-import io.playersapi.core.domain.PlayerStatus
+import io.playersapi.application.dto.PlayerFilter
+import io.smallrye.mutiny.coroutines.awaitSuspending
+import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -12,7 +13,7 @@ class InMemoryPlayerRepositoryTest {
 
     @Test
     fun `should return all players when findAll is called`() {
-        val players = repository.findAll()
+        val players = runBlocking { repository.findByFilters(PlayerFilter()).awaitSuspending() }
 
         assertEquals(5, players.size)
         assertTrue(players.any { it.name == "Rafael Leao" })
@@ -21,9 +22,7 @@ class InMemoryPlayerRepositoryTest {
 
     @Test
     fun `should return filtered players by position`() {
-        val players = repository.findByFilters(
-            PlayerFilterDTO(position = "Winger", null, null, null, null)
-        )
+        val players = runBlocking { repository.findByFilters(PlayerFilter(position = "Winger")).awaitSuspending() }
 
         assertEquals(1, players.size)
         assertEquals("Rafael Leao", players.first().name)
@@ -31,9 +30,7 @@ class InMemoryPlayerRepositoryTest {
 
     @Test
     fun `should return filtered players by minBirthYear`() {
-        val players = repository.findByFilters(
-            PlayerFilterDTO(null, 1990, null, null, null)
-        )
+        val players = runBlocking { repository.findByFilters(PlayerFilter(minBirthYear = 1990)).awaitSuspending() }
 
         assertEquals(3, players.size)
         assertTrue(players.all { it.birthYear >= 1990 })
@@ -41,9 +38,7 @@ class InMemoryPlayerRepositoryTest {
 
     @Test
     fun `should return filtered players by maxBirthYear`() {
-        val players = repository.findByFilters(
-            PlayerFilterDTO(null, null, 1980, null, null)
-        )
+        val players = runBlocking { repository.findByFilters(PlayerFilter(maxBirthYear = 1980)).awaitSuspending() }
 
         assertEquals(2, players.size)
         assertTrue(players.all { it.birthYear <= 1980 })
@@ -51,19 +46,16 @@ class InMemoryPlayerRepositoryTest {
 
     @Test
     fun `should return filtered players by status`() {
-        val players = repository.findByFilters(
-            PlayerFilterDTO(null, null, null, PlayerStatus.ACTIVE.name, null)
-        )
+        val players = runBlocking { repository.findByFilters(PlayerFilter(status = "ACTIVE")).awaitSuspending() }
+
 
         assertEquals(3, players.size)
-        assertTrue(players.all { it.status == PlayerStatus.ACTIVE })
+        assertTrue(players.all { it.status.name == "ACTIVE" })
     }
 
     @Test
     fun `should return filtered players by club`() {
-        val players = repository.findByFilters(
-            PlayerFilterDTO(null, null, null, null, "Milan")
-        )
+        val players = runBlocking { repository.findByFilters(PlayerFilter(club = "Milan")).awaitSuspending() }
 
         assertEquals(1, players.size)
         assertEquals("Rafael Leao", players.first().name)
@@ -71,9 +63,8 @@ class InMemoryPlayerRepositoryTest {
 
     @Test
     fun `should return filtered players by multiple criteria`() {
-        val players = repository.findByFilters(
-            PlayerFilterDTO("Winger", 1998, null, PlayerStatus.ACTIVE.name, "Milan")
-        )
+        val players = runBlocking { repository.findByFilters(PlayerFilter(position = "Winger", minBirthYear = 1998, status = "ACTIVE", club = "Milan")).awaitSuspending() }
+
 
         assertEquals(1, players.size)
         assertEquals("Rafael Leao", players.first().name)
@@ -81,9 +72,7 @@ class InMemoryPlayerRepositoryTest {
 
     @Test
     fun `should return empty list if no players match the filters`() {
-        val players = repository.findByFilters(
-            PlayerFilterDTO("Goalkeeper", 1980, 1990, PlayerStatus.RETIRED.name, "Juventus")
-        )
+        val players = runBlocking { repository.findByFilters(PlayerFilter(position = "Goalkeeper", minBirthYear = 1980, maxBirthYear = 1990, status = "RETIRED", club = "Juventus")).awaitSuspending() }
 
         assertTrue(players.isEmpty())
     }

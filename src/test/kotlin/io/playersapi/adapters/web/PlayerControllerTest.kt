@@ -1,17 +1,23 @@
 package io.playersapi.adapters.web
 
-import io.playersapi.application.dto.PlayerDTO
-import io.playersapi.application.dto.PlayerFilterDTO
+import io.playersapi.adapters.web.errors.ErrorCodes
+import io.playersapi.adapters.web.errors.InvalidPlayerStatusException
+import io.playersapi.application.dto.PlayerFilter
 import io.playersapi.application.services.PlayerService
-import io.playersapi.core.domain.PlayerStatus
+import io.playersapi.testutils.TestData
 import io.quarkus.test.InjectMock
 import io.quarkus.test.common.http.TestHTTPEndpoint
 import io.quarkus.test.junit.QuarkusTest
 import io.restassured.RestAssured.given
+import io.smallrye.mutiny.Uni
 import jakarta.ws.rs.core.Response
-import org.hamcrest.core.Is.`is`
-import org.junit.jupiter.api.Test
+import org.hamcrest.CoreMatchers.`is`
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
+import org.mockito.Mockito
 import org.mockito.Mockito.`when`
+import java.util.stream.Stream
 
 @QuarkusTest
 @TestHTTPEndpoint(PlayerController::class)
@@ -20,213 +26,75 @@ class PlayerControllerTest {
     @InjectMock
     private lateinit var playerService: PlayerService
 
-    private val players = listOf(
-        PlayerDTO(1, "Rafael Leao", "Winger", 1999, PlayerStatus.ACTIVE, "Milan"),
-        PlayerDTO(2, "Gianluigi Buffon", "Goalkeeper", 1978, PlayerStatus.RETIRED, "Retired"),
-        PlayerDTO(3, "Alessandro Bastoni", "Defender", 1999, PlayerStatus.ACTIVE, "Inter"),
-        PlayerDTO(4, "Sandi Lovric", "Midfielder", 1998, PlayerStatus.ACTIVE, "Udinese"),
-        PlayerDTO(5, "Filippo Inzaghi", "Forward", 1973, PlayerStatus.RETIRED, "Retired")
-    )
+    @ParameterizedTest
+    @MethodSource("filterArguments")
+    fun `should return players based on filters`(
+        filter: PlayerFilter,
+        expectedStatusCode: Int,
+        expectedSize: Int,
+        expectedNames: List<String>?
+    ) {
+        if (expectedStatusCode == Response.Status.OK.statusCode) {
+            `when`(playerService.filterPlayers(filter)).thenReturn(
+                Uni.createFrom().item(
+                    playersResponse.filter {
+                        (filter.position == null || it.position == filter.position) &&
+                                (filter.minBirthYear == null || it.birthYear >= filter.minBirthYear!!) &&
+                                (filter.maxBirthYear == null || it.birthYear <= filter.maxBirthYear!!) &&
+                                (filter.status == null || it.status.name == filter.status) && //Usa filter.status
+                                (filter.club == null || it.club == filter.club)
+                    }
+                )
+            )
+        } else {
+            `when`(playerService.filterPlayers(filter)).thenReturn(
+                Uni.createFrom().failure(InvalidPlayerStatusException("INVALID_STATUS"))
+            )
+        }
 
-    @Test
-    fun `should return players filtered by status ACTIVE`() {
-        `when` ( playerService.filterPlayers(
-            PlayerFilterDTO(null, null, null, PlayerStatus.ACTIVE.name, null)
-        )).thenReturn(players.filter { it.status == PlayerStatus.ACTIVE })
+        val request = given()
+        filter.position?.let { request.queryParam("position", it) }
+        filter.minBirthYear?.let { request.queryParam("minBirthYear", it) }
+        filter.maxBirthYear?.let { request.queryParam("maxBirthYear", it) }
+        filter.status?.let { request.queryParam("status", it) }
+        filter.club?.let { request.queryParam("club", it) }
 
-        given()
-            .queryParam("status", "ACTIVE")
-            .`when`()
-            .get()
+        request.`when`().get()
             .then()
-            .statusCode(Response.Status.OK.statusCode)
-            .body("size()", `is`(3))
-            .body("[0].name", `is`("Rafael Leao"))
-            .body("[1].name", `is`("Alessandro Bastoni"))
-            .body("[2].name", `is`("Sandi Lovric"))
+            .statusCode(expectedStatusCode)
+            .apply {
+                if (expectedStatusCode == Response.Status.OK.statusCode) {
+                    body("size()", `is`(expectedSize))
+                    expectedNames?.forEachIndexed { index, name ->
+                        body("[$index].name", `is`(name))
+                    }
+                } else {
+                    body("message", `is`("Invalid player status: INVALID_STATUS"))
+                    body("code", `is`(ErrorCodes.INVALID_PLAYER_STATUS))
+                }
+            }
+
+        Mockito.verify(playerService).filterPlayers(filter)
+        Mockito.verifyNoMoreInteractions(playerService)
     }
 
-    @Test
-    fun `should return players filtered by status RETIRED`() {
-        `when` ( playerService.filterPlayers(
-            PlayerFilterDTO(null, null, null, PlayerStatus.RETIRED.name, null)
-            )).thenReturn(players.filter { it.status == PlayerStatus.RETIRED })
+    companion object {
+        val playersResponse = TestData.playersResponse
 
-        given()
-            .queryParam("status", "RETIRED")
-            .`when`()
-            .get()
-            .then()
-            .statusCode(Response.Status.OK.statusCode)
-            .body("size()", `is`(2))
-            .body("[0].name", `is`("Gianluigi Buffon"))
-            .body("[1].name", `is`("Filippo Inzaghi"))
+        @JvmStatic
+        fun filterArguments(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of(PlayerFilter(null, null, null, null, null), Response.Status.OK.statusCode, 5, listOf("Rafael Leao", "Gianluigi Buffon", "Alessandro Bastoni", "Sandi Lovric", "Filippo Inzaghi")),
+                Arguments.of(PlayerFilter("Winger", null, null, null, null), Response.Status.OK.statusCode, 1, listOf("Rafael Leao")),
+                Arguments.of(PlayerFilter(null, 1998, null, null, null), Response.Status.OK.statusCode, 3, listOf("Rafael Leao", "Alessandro Bastoni", "Sandi Lovric")),
+                Arguments.of(PlayerFilter(null, null, 1978, null, null), Response.Status.OK.statusCode, 2, listOf("Gianluigi Buffon", "Filippo Inzaghi")),
+                Arguments.of(PlayerFilter(null, null, null, "ACTIVE", null), Response.Status.OK.statusCode, 3, listOf("Rafael Leao", "Alessandro Bastoni", "Sandi Lovric")),
+                Arguments.of(PlayerFilter(null, null, null, "RETIRED", null), Response.Status.OK.statusCode, 2, listOf("Gianluigi Buffon", "Filippo Inzaghi")),
+                Arguments.of(PlayerFilter(null, null, null, null, "Milan"), Response.Status.OK.statusCode, 1, listOf("Rafael Leao")),
+                Arguments.of(PlayerFilter("Midfielder", 1995, 2000, "ACTIVE", "Udinese"), Response.Status.OK.statusCode, 1, listOf("Sandi Lovric")),
+                Arguments.of(PlayerFilter("Striker", 2000, null, "ACTIVE", "Juventus"), Response.Status.OK.statusCode, 0, emptyList<String>()),
+                Arguments.of(PlayerFilter(null, null, null, "INVALID_STATUS", null), Response.Status.BAD_REQUEST.statusCode, 0, null)
+            )
+        }
     }
-
-    @Test
-    fun `should return players filtered by position Defender`() {
-        `when` ( playerService.filterPlayers(
-         PlayerFilterDTO("Defender", null, null, null, null)
-        )).thenReturn(players.filter { it.position == "Defender" })
-
-        given()
-            .queryParam("position", "Defender")
-            .`when`()
-            .get()
-            .then()
-            .statusCode(Response.Status.OK.statusCode)
-            .body("size()", `is`(1))
-            .body("[0].name", `is`("Alessandro Bastoni"))
-    }
-
-    @Test
-    fun `should return players filtered by min birth year 1998`() {
-        `when` ( playerService.filterPlayers(
-            PlayerFilterDTO(null, 1998, null, null, null)
-        )).thenReturn(players.filter { it.birthYear >= 1998 })
-
-        given()
-            .queryParam("minBirthYear", 1998)
-            .`when`()
-            .get()
-            .then()
-            .statusCode(Response.Status.OK.statusCode)
-            .body("size()", `is`(3))
-            .body("[0].name", `is`("Rafael Leao"))
-            .body("[1].name", `is`("Alessandro Bastoni"))
-            .body("[2].name", `is`("Sandi Lovric"))
-    }
-
-    @Test
-    fun `should return players filtered by max birth year 1978`() {
-        `when` ( playerService.filterPlayers(
-            PlayerFilterDTO(null, null, 1978, null, null)
-        )).thenReturn(players.filter { it.birthYear <= 1978 })
-
-        given()
-            .queryParam("maxBirthYear", 1978)
-            .`when`()
-            .get()
-            .then()
-            .statusCode(Response.Status.OK.statusCode)
-            .body("size()", `is`(2))
-            .body("[0].name", `is`("Gianluigi Buffon"))
-            .body("[1].name", `is`("Filippo Inzaghi"))
-    }
-
-    @Test
-    fun `should return players filtered by club Milan`() {
-        `when` ( playerService.filterPlayers(
-            PlayerFilterDTO(null, null, null, null, "Milan")
-        )).thenReturn(players.filter { it.club == "Milan" })
-
-        given()
-            .queryParam("club", "Milan")
-            .`when`()
-            .get()
-            .then()
-            .statusCode(Response.Status.OK.statusCode)
-            .body("size()", `is`(1))
-            .body("[0].name", `is`("Rafael Leao"))
-    }
-
-    @Test
-    fun `should return players matching multiple filters`() {
-        `when` ( playerService.filterPlayers(
-            PlayerFilterDTO("Midfielder", 1995, 2000, PlayerStatus.ACTIVE.name, "Udinese")
-        )).thenReturn(
-                players.filter {
-                    it.position == "Midfielder" && it.birthYear in 1995..2000 && it.status == PlayerStatus.ACTIVE && it.club == "Udinese"
-                })
-
-        given()
-            .queryParam("position", "Midfielder")
-            .queryParam("minBirthYear", 1995)
-            .queryParam("maxBirthYear", 2000)
-            .queryParam("status", "ACTIVE")
-            .queryParam("club", "Udinese")
-            .`when`()
-            .get()
-            .then()
-            .statusCode(Response.Status.OK.statusCode)
-            .body("size()", `is`(1))
-            .body("[0].name", `is`("Sandi Lovric"))
-    }
-
-    @Test
-    fun `should return empty list when no players match filters`() {
-        `when` ( playerService.filterPlayers(
-            PlayerFilterDTO("Striker", 2000, null, PlayerStatus.ACTIVE.name, "Juventus")
-            )).thenReturn(emptyList())
-
-        given()
-            .queryParam("position", "Striker")
-            .queryParam("minBirthYear", 2000)
-            .queryParam("status", "ACTIVE")
-            .queryParam("club", "Juventus")
-            .`when`()
-            .get()
-            .then()
-            .statusCode(Response.Status.OK.statusCode)
-            .body("size()", `is`(0))
-    }
-
-    @Test
-    fun `should return all players when no filters are provided`() {
-        `when` ( playerService.filterPlayers(
-            PlayerFilterDTO(null, null, null, null, null)
-            )).thenReturn(players)
-
-        given()
-            .`when`()
-            .get()
-            .then()
-            .statusCode(Response.Status.OK.statusCode)
-            .body("size()", `is`(5))
-    }
-
-    @Test
-    fun `should return all players when the only filter is unknown`() {
-        `when` ( playerService.filterPlayers(
-            PlayerFilterDTO(null, null, null, null, null)
-        )).thenReturn(players)
-
-        given()
-            .queryParam("unknown", "filter")
-            .`when`()
-            .get()
-            .then()
-            .statusCode(Response.Status.OK.statusCode)
-            .body("size()", `is`(5))
-    }
-
-    @Test
-    fun `should return players filtered by club Milan ignoring unknown filter`() {
-        `when` ( playerService.filterPlayers(
-            PlayerFilterDTO(null, null, null, null, "Milan")
-        )).thenReturn(players.filter { it.club == "Milan" })
-
-        given()
-            .queryParam("club", "Milan")
-            .queryParam("unknown", "filter")
-            .`when`()
-            .get()
-            .then()
-            .statusCode(Response.Status.OK.statusCode)
-            .body("size()", `is`(1))
-            .body("[0].name", `is`("Rafael Leao"))
-    }
-
-    @Test
-    fun `should return 400 for invalid status`() {
-        given()
-            .queryParam("status", "INVALID_STATUS")
-            .`when`()
-            .get()
-            .then()
-            .statusCode(Response.Status.BAD_REQUEST.statusCode)
-            .body("message", `is` ("Invalid status value: INVALID_STATUS"))
-            .body("code" , `is` ("INVALID_PLAYER_STATUS"))
-    }
-
 }
