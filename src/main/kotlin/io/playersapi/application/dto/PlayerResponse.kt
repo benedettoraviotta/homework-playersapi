@@ -2,7 +2,7 @@ package io.playersapi.application.dto
 
 import io.playersapi.core.domain.PlayerStatus
 
-data class PlayerDTO(
+data class PlayerResponse(
     val id: Long,
     val name: String,
     val position: String,

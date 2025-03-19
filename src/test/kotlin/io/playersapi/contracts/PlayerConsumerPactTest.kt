@@ -19,7 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 @PactTestFor(providerName = "PlayerProvider", port = "8085")
 @PactDirectory("src/test/resources/pacts")
 @QuarkusTest
-class PlayerResourceConsumerPactTest {
+class PlayerConsumerPactTest {
 
     @BeforeEach
     fun setup() {

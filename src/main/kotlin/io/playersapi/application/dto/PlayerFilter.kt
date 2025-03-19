@@ -3,7 +3,7 @@ package io.playersapi.application.dto
 import io.playersapi.core.domain.PlayerStatus
 
 
-data class PlayerFilterDTO(
+data class PlayerFilter(
     val position: String? = null,
     val minBirthYear: Int? = null,
     val maxBirthYear: Int? = null,
